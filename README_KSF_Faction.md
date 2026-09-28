@@ -37,8 +37,13 @@ publish it anywhere.
 |---|---|
 | Antistasi | required (this addon declares `requiredAddons[] = {"A3A_core"}`) |
 | CBA | pulled in by Antistasi |
-| Arma 3 Tools | **not required** - builds with the bundled HEMTT |
+| HEMTT | **not required** - a copy is committed at `Tools\Builder\hemtt.exe` |
+| Arma 3 Tools | optional, but recommended - used to validate `config.cpp` with BI's own CfgConvert |
 | Addon Builder | **not required** |
+
+`Tools\Validate.ps1` looks for Arma 3 Tools in the usual Steam locations. If it
+cannot find it, the validation step SKIPs and the build carries on; set
+`$env:ARMATOOLS` to point somewhere non-standard, or pass `-ArmaToolsPath`.
 
 ## Layout
 
@@ -61,6 +66,9 @@ a3a_ksf/
       $PBOPREFIX$                          x\a3a_ksf\addons\templates
 ```
 
+At the repo root: `Build.ps1` (validate then pack), `Tools\Validate.ps1`
+(Arma 3 Tools config validation), `Tools\Builder\` (bundled HEMTT).
+
 Note: `$PBOPREFIX$` is a **file** sitting directly in each addon folder, not a
 folder containing a file. That is what upstream A3AExtender ships, and what
 armake reads.
@@ -75,7 +83,16 @@ and `functions` only held upstream examples.
 & ".\Build.ps1"
 ```
 
-or directly:
+This validates the config with CfgConvert first, then packs with the bundled
+HEMTT. If validation fails it stops before packing:
+
+```powershell
+& ".\Build.ps1" -SkipValidate          # pack anyway
+& ".\Tools\Validate.ps1"               # validation on its own
+& ".\Tools\Validate.ps1" -Strict       # fail the build if Arma 3 Tools is missing
+```
+
+or directly, skipping validation:
 
 ```powershell
 & ".\Tools\Builder\buildAddons.ps1"
@@ -89,6 +106,30 @@ build\a3a_ksf\meta.cpp
 build\a3a_ksf\addons\core.pbo
 build\a3a_ksf\addons\templates.pbo
 ```
+
+## Config validation
+
+HEMTT will happily pack a broken config, so `Tools\Validate.ps1` runs
+`config.cpp` for every addon through BI's own **CfgConvert** as a pre-pack
+gate. It catches unresolved `#include`s, macro expansion failures and
+unbalanced braces, and asserts the result still contains the classes this
+addon promises (`class KSF: Vanilla_Base`, `a3a_ksf_core`, ...).
+
+Two sharp edges it works around, both of which produce a *false pass* if you
+call CfgConvert by hand:
+
+* **CfgConvert requires `-dst`.** Omit it and the exe exits 0 while writing a
+  well-formed but empty 26-byte `config.bin`. Every conversion is therefore
+  round-tripped back to text and checked, so a silent no-op fails the build
+  rather than passing it.
+* **It resolves `\x\foo` as `x\foo` relative to the current directory.** Since
+  this addon is not installed into the game folder, the script stages a
+  temporary tree containing an `x\` mirror of `a3a_ksf` and runs the
+  conversion from inside it.
+
+`binarize` was evaluated for SQF checking and is not used: Arma 3 itself is not
+installed here, and it returns exit 0 for syntactically *invalid* SQF, so it
+would be a check that always passes. SQF is not officially validated.
 
 ## Install
 
