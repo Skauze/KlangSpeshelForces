@@ -109,8 +109,12 @@ Tanoa and Sahra, and limited to the `arid` and `tropical` climates.
 
 ## Weapons and explosives
 
-Klang Speshel Forces is armed with Russian-pattern weapons. The loadout picks
-its gear at runtime, so the same faction works with or without CUP loaded:
+Klang Speshel Forces stocks Russian-pattern weapons **in the arsenal**, i.e.
+`_initialRebelEquipment` - the crate you resupply from at a KSF base. The
+militia NPC unit loadouts are deliberately left alone, so this changes what
+*you* can take, not what the AI spawns holding.
+
+Gear is picked at runtime, so the same faction works with or without CUP:
 
 | | with CUP | without CUP (vanilla fallback) |
 |---|---|---|
@@ -121,29 +125,31 @@ its gear at runtime, so the same faction works with or without CUP loaded:
 Detection tests the weapon classes themselves
 (`isClass (configFile >> "CfgWeapons" >> "CUP_arifle_AK47")`) rather than a
 `CfgPatches` entry, because third-party patch names are not something this
-addon can rely on. The consequence is that the faction is never unarmed: if
-CUP is missing you get the vanilla AKM/Rook-40 instead, not a blank loadout.
+addon can rely on. The consequence is that the arsenal is never empty-handed:
+if CUP is missing you get the vanilla AKM/Rook-40 instead, not a blank crate.
 
-Every unit carries 12 primary and 6 sidearm magazines. Explosives are
-vanilla-remote-charge classnames (`DemoCharge_Remote_Mag`,
+Counts currently in the arsenal: 4 primaries, 4 sidearms, 48 primary
+magazines, 12 sidearm magazines, 20 small urban IEDs, 20 small land IEDs,
+6 large urban IEDs, 6 large land IEDs, 8 demo charges, 4 satchel charges.
+
+Explosives use vanilla-remote-charge classnames (`DemoCharge_Remote_Mag`,
 `SatchelCharge_Remote_Mag`) because ACE3 *re-declares* those classes rather
-than replacing them, so the same classnames are correct either way. IED counts
-live in `_initialRebelEquipment` in `KSF_Reb.sqf`.
+than replacing them, so the same classnames are correct either way.
 
-When ACE3 is present, the squad leader also gets `ACE_DeadManSwitch`,
+When ACE3 is present the arsenal also carries `ACE_DeadManSwitch`,
 `ACE_Clacker` and `ACE_DefusalKit`. The dead man's switch is a genuine
 inventory item - an `ACE_ItemCore` the `DeadmanSwitch` trigger acts on - not a
-radio or a scripted effect, so it can simply be handed to a unit.
+radio or a scripted effect, so it can simply be picked up and carried.
 
-### Why ammo is not "infinite"
+### Why the ammo is not "infinite"
 
 Antistasi templates cannot express infinite ammunition. In
 `fn_loadout_addItems.sqf` a batch is only inserted when `_count > 0`, so
 passing `-1` yields **zero** magazines, not unlimited ones. Ammunition is also
-capped by the inventory/crafting system regardless. The counts are therefore
-high-but-finite, and the numbers you want live on the `["primary", N]` and
-`["handgun", N]` lines in the unit templates - change them there, in
-`KSF_Reb.sqf`, not in a variable at the top of the file.
+capped by the inventory/crafting system regardless, and the arsenal crate
+refills on a timer. The counts are therefore high-but-finite; to change them
+edit the `[_primary, 4]` / `[_primaryMags select 0, 48]` style entries in the
+"Rebel Starting Gear" list in `KSF_Reb.sqf`.
 
 ## Editing the faction
 
