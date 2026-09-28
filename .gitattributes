@@ -1,0 +1,16 @@
+# Normalize text files to CRLF in the working tree (Arma 3 / Windows only project)
+* text=auto
+*.sqf  text eol=crlf
+*.hpp  text eol=crlf
+*.cpp  text eol=crlf
+*.inc  text eol=crlf
+*.ps1  text eol=crlf
+*.md   text eol=crlf
+*.xml  text eol=crlf
+
+# Never touch binaries
+*.exe  binary
+*.dll  binary
+*.paa  binary
+*.jpg  binary
+*.sqm  binary

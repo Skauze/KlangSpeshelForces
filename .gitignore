@@ -1,0 +1,23 @@
+# Build output
+build/
+dist/
+*.pbo
+*.pbo.bak
+*.biprivatekey
+*.log
+
+# Arma 3 / Antistasi tooling
+AntistasiBuilder.cfg
+PreparedMissions/
+*.Arma3Profile
+*.exe.manifest
+
+# Editors and OS cruft
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Note: Tools/Builder/hemtt.exe is intentionally committed so the project
+# builds without Arma 3 Tools. Do not add a blanket *.exe rule here.
