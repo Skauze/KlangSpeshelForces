@@ -77,6 +77,42 @@ if ("ws" in A3A_enabledDLC) then {
 
 #include "KSF_Reb_Vehicle_Attributes.sqf"
 
+/////////////////////////////////////
+//  Weapons / Explosives selection  //
+/////////////////////////////////////
+
+// A template CANNOT express "infinite" ammunition. fn_loadout_addItems.sqf
+// only inserts a batch when _count > 0, so a negative or -1 count resolves to
+// zero magazines rather than "unlimited". Ammo is also bounded by the
+// inventory/crafting system, so the counts used in the unit templates below
+// are deliberately high-but-finite. Change the numbers on the
+// ["primary", N] / ["handgun", N] lines to retune them.
+
+// CUP is preferred. When it is absent we fall back to Russian-pattern
+// weapons that ship with vanilla Arma 3, so the faction is never unarmed.
+// Detection tests the weapon classes themselves rather than a CfgPatches
+// entry - third-party patch names are not something we can rely on.
+private _hasCUP = isClass (configFile >> "CfgWeapons" >> "CUP_arifle_AK47")
+              && isClass (configFile >> "CfgWeapons" >> "CUP_hgun_Makarov");
+private _hasACE = isClass (configFile >> "CfgWeapons" >> "ACE_DeadManSwitch");
+
+private _primary;
+private _primaryMags;
+private _sidearm;
+private _sidearmMags;
+
+if (_hasCUP) then {
+    _primary     = "CUP_arifle_AK47";
+    _primaryMags = ["CUP_30Rnd_762x39_AK47_bakelite_M"];
+    _sidearm     = "CUP_hgun_Makarov";
+    _sidearmMags = ["CUP_8Rnd_9x18_Makarov_M"];
+} else {
+    _primary     = "arifle_AKM_F";
+    _primaryMags = ["30Rnd_762x39_Mag_F"];
+    _sidearm     = "hgun_Rook40_F";
+    _sidearmMags = ["30Rnd_9x21_Mag"];
+};
+
 ///////////////////////////
 //  Rebel Starting Gear  //
 ///////////////////////////
@@ -85,7 +121,7 @@ private _initialRebelEquipment = [
 "hgun_Pistol_heavy_02_F","hgun_P07_F",
 "SMG_01_F","hgun_PDW2000_F","SMG_02_F",
 "6Rnd_45ACP_Cylinder","16Rnd_9x21_Mag","30Rnd_45ACP_Mag_SMG_01","30Rnd_9x21_Mag_SMG_02","MiniGrenade","SmokeShell",
-["IEDUrbanSmall_Remote_Mag", 10], ["IEDLandSmall_Remote_Mag", 10], ["IEDUrbanBig_Remote_Mag", 3], ["IEDLandBig_Remote_Mag", 3],
+["IEDUrbanSmall_Remote_Mag", 20], ["IEDLandSmall_Remote_Mag", 20], ["IEDUrbanBig_Remote_Mag", 6], ["IEDLandBig_Remote_Mag", 6],
 "B_FieldPack_oli","B_FieldPack_blk","B_FieldPack_ocamo","B_FieldPack_oucamo","B_FieldPack_cbr","B_FieldPack_khk",
 "V_Chestrig_blk","V_Chestrig_rgr","V_Chestrig_khk","V_Chestrig_oli","V_BandollierB_blk","V_BandollierB_cbr","V_BandollierB_rgr",
 "V_BandollierB_khk","V_BandollierB_oli","V_Rangemaster_belt",
@@ -105,6 +141,32 @@ if (A3A_hasTFAR) then {_initialRebelEquipment append ["tf_microdagr","tf_anprc15
 if (A3A_hasTFAR && startWithLongRangeRadio) then {_initialRebelEquipment append ["tf_anprc155"]};
 if (A3A_hasTFARBeta) then {_initialRebelEquipment append ["TFAR_microdagr","TFAR_anprc154"]};
 if (A3A_hasTFARBeta && startWithLongRangeRadio) then {_initialRebelEquipment append ["TFAR_anprc155"]};
+
+// Primary and sidearm, plus magazines, so the KSF arsenal is usable as-is.
+_initialRebelEquipment append [
+    [_primary, 4],
+    [_sidearm, 4],
+    [_primaryMags select 0, 48],
+    [_sidearmMags select 0, 12]
+];
+
+// Explosives. ACE3 re-declares the vanilla charge classes rather than
+// replacing them, so these classnames are correct with or without ACE.
+_initialRebelEquipment append [
+    ["DemoCharge_Remote_Mag", 8],
+    ["SatchelCharge_Remote_Mag", 4]
+];
+
+// ACE3 only. Dead man's switch is a real inventory item (an ACE_ItemCore that
+// the DeadmanSwitch trigger acts on), not a radio or a scripted effect.
+if (_hasACE) then {
+    _initialRebelEquipment append [
+        ["ACE_DeadManSwitch", 2],
+        ["ACE_Clacker", 4],
+        ["ACE_DefusalKit", 2]
+    ];
+};
+
 _initialRebelEquipment append ["Chemlight_blue","Chemlight_green","Chemlight_red","Chemlight_yellow"];
 ["initialRebelEquipment", _initialRebelEquipment] call _fnc_saveToTemplate;
 
@@ -188,6 +250,31 @@ _loadoutData set ["binoculars", ["Binocular"]];
 
 _loadoutData set ["uniforms", _rebUniforms];
 
+// Weapon entry format is
+//   [weapon, muzzle, pointer, optic, primaryMags[], secondaryMags[], bipod]
+// Only the classnames vary - the selected CUP-or-vanilla pair is built earlier
+// in this file, so this stays correct whether or not CUP is loaded.
+_loadoutData set ["rifles", [[_primary, "", "", "", _primaryMags, [], ""]]];
+_loadoutData set ["sidearms", [[_sidearm, "", "", "", _sidearmMags, [], ""]]];
+_loadoutData set ["carbines", [[_primary, "", "", "", _primaryMags, [], ""]]];
+_loadoutData set ["SMGs", [[_primary, "", "", "", _primaryMags, [], ""]]];
+// Contact (enoch) asset - must stay gated to match the starting gear above.
+if ("enoch" in A3A_enabledDLC) then {
+    _loadoutData set ["shotguns", ["sgun_HunterShotgun_01_F"]];
+};
+
+_loadoutData set ["lightExplosives", ["DemoCharge_Remote_Mag"]];
+_loadoutData set ["heavyExplosives", ["SatchelCharge_Remote_Mag"]];
+_loadoutData set ["ATMines", ["ATMine_Range_Mag"]];
+_loadoutData set ["APMines", ["APERSMine_Range_Mag"]];
+if (_hasACE) then {
+    _loadoutData set ["items_squadLeader_extras", ["ACE_Clacker", "ACE_DeadManSwitch", "ACE_DefusalKit"]];
+    _loadoutData set ["items_explosivesExpert_extras", ["ACE_Clacker", "ACE_DeadManSwitch", "ACE_DefusalKit"]];
+} else {
+    _loadoutData set ["items_squadLeader_extras", []];
+    _loadoutData set ["items_explosivesExpert_extras", []];
+};
+
 _loadoutData set ["glasses", ["G_Shades_Black", "G_Shades_Blue", "G_Shades_Green", "G_Shades_Red", "G_Aviator", "G_Spectacles", "G_Spectacles_Tinted", "G_Sport_BlackWhite", "G_Sport_Blackyellow", "G_Sport_Greenblack", "G_Sport_Checkered", "G_Sport_Red", "G_Squares", "G_Squares_Tinted"]];
 _loadoutData set ["goggles", ["G_Lowprofile"]];
 _loadoutData set ["facemask", ["G_Bandanna_blk", "G_Bandanna_oli", "G_Bandanna_khk", "G_Bandanna_tan", "G_Bandanna_beast", "G_Bandanna_shades", "G_Bandanna_sport", "G_Bandanna_aviator"]];
@@ -205,8 +292,14 @@ private _squadLeaderTemplate = {
     ["uniforms"] call _fnc_setUniform;
     [selectRandomWeighted [[], 1.25, "glasses", 1, "goggles", 0.75, "facemask", 1]] call _fnc_setFacewear;
 
+    ["rifles"] call _fnc_setPrimary;
+    ["primary", 12] call _fnc_addMagazines;
+    ["sidearms"] call _fnc_setHandgun;
+    ["handgun", 6] call _fnc_addMagazines;
+
     ["items_medical_standard"] call _fnc_addItemSet;
     ["items_miscEssentials"] call _fnc_addItemSet;
+    ["items_squadLeader_extras"] call _fnc_addItemSet;
 
     ["maps"] call _fnc_addMap;
     ["watches"] call _fnc_addWatch;
@@ -217,6 +310,11 @@ private _squadLeaderTemplate = {
 private _riflemanTemplate = {
     ["uniforms"] call _fnc_setUniform;
     [selectRandomWeighted [[], 1.25, "glasses", 1, "goggles", 0.75, "facemask", 1]] call _fnc_setFacewear;
+
+    ["rifles"] call _fnc_setPrimary;
+    ["primary", 12] call _fnc_addMagazines;
+    ["sidearms"] call _fnc_setHandgun;
+    ["handgun", 6] call _fnc_addMagazines;
 
     ["items_medical_standard"] call _fnc_addItemSet;
     ["items_miscEssentials"] call _fnc_addItemSet;

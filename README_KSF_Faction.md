@@ -107,6 +107,44 @@ Start Antistasi, open the **faction selector** (the Antistasi slot-selection
 screen) and pick **KSF** on the player side. It is prioritized on Altis,
 Tanoa and Sahra, and limited to the `arid` and `tropical` climates.
 
+## Weapons and explosives
+
+Klang Speshel Forces is armed with Russian-pattern weapons. The loadout picks
+its gear at runtime, so the same faction works with or without CUP loaded:
+
+| | with CUP | without CUP (vanilla fallback) |
+|---|---|---|
+| primary | `CUP_arifle_AK47` | `arifle_AKM_F` |
+| sidearm | `CUP_hgun_Makarov` | `hgun_Rook40_F` |
+| magazines | `CUP_30Rnd_762x39_AK47_bakelite_M`, `CUP_8Rnd_9x18_Makarov_M` | `30Rnd_762x39_Mag_F`, `30Rnd_9x21_Mag` |
+
+Detection tests the weapon classes themselves
+(`isClass (configFile >> "CfgWeapons" >> "CUP_arifle_AK47")`) rather than a
+`CfgPatches` entry, because third-party patch names are not something this
+addon can rely on. The consequence is that the faction is never unarmed: if
+CUP is missing you get the vanilla AKM/Rook-40 instead, not a blank loadout.
+
+Every unit carries 12 primary and 6 sidearm magazines. Explosives are
+vanilla-remote-charge classnames (`DemoCharge_Remote_Mag`,
+`SatchelCharge_Remote_Mag`) because ACE3 *re-declares* those classes rather
+than replacing them, so the same classnames are correct either way. IED counts
+live in `_initialRebelEquipment` in `KSF_Reb.sqf`.
+
+When ACE3 is present, the squad leader also gets `ACE_DeadManSwitch`,
+`ACE_Clacker` and `ACE_DefusalKit`. The dead man's switch is a genuine
+inventory item - an `ACE_ItemCore` the `DeadmanSwitch` trigger acts on - not a
+radio or a scripted effect, so it can simply be handed to a unit.
+
+### Why ammo is not "infinite"
+
+Antistasi templates cannot express infinite ammunition. In
+`fn_loadout_addItems.sqf` a batch is only inserted when `_count > 0`, so
+passing `-1` yields **zero** magazines, not unlimited ones. Ammunition is also
+capped by the inventory/crafting system regardless. The counts are therefore
+high-but-finite, and the numbers you want live on the `["primary", N]` and
+`["handgun", N]` lines in the unit templates - change them there, in
+`KSF_Reb.sqf`, not in a variable at the top of the file.
+
 ## Editing the faction
 
 Everything lives in two files:
